@@ -74,6 +74,45 @@ function sendAck(hl, id, targetId){
         console.log(`worker has just send a ack to ${targetId}`);
         })
 }
+
+function maj_h(he) {
+  if (he > hl) {
+    hl = he;
+  } else {
+    hl += 1;
+  }
+}
+
+function diffuser(msg) {
+  for (let targetId = 0; targetId < table.length; targetId++) {
+    let HTTPportDest = HTTPStartPort + targetId;
+    if (HTTPportDest != HTTPport) {
+      fetch(
+        `http://${hostname}:${HTTPportDest}/${msg}`,
+        {
+            method: 'get',
+            body: JSON.stringify({"hl":hl,"id":id}),
+            headers: {'Content-Type': 'application/json'}
+        }
+        )
+        .then(()=>{
+        console.log(`worker has just send a ${msg} to ${targetId}`);
+        })
+    }
+  }
+}
+
+function plus_vieille_date() {
+  let plusVieilleDate = 0;
+  let plusVieilleDateProcessId = 0;
+  for (let id = 0; id < table.length; id++) {
+    if (table[id][1] > plusVieilleDate) {
+      plusVieilleDate = table[id][1];
+      plusVieilleDateProcessId = id;
+    }
+  }
+  return plusVieilleDateProcessId;
+}
   
   
   async function cruise(){
