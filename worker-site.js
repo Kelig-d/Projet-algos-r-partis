@@ -4,20 +4,20 @@ const express = require('express')
 const app = express()
 app.use(express.json());   
 app.use(express.urlencoded({ extended: true })); 
-
+console.log(workerData);
 const id = workerData.id; 
 const hostIP = workerData.hostIP;
 const hostname = workerData.hostname;
 const HTTPport = workerData.HTTPport; 
 const HTTPStartPort = workerData.HTTPStartPort; 
-let hl = workerData.hl;
-let he = workerData.he;
-let debprod = workerData.debprod;
-let finprod = workerData.finprod;
+let hl = 0;
+let he = 0;
+let debprod = 0;
+let finprod = 0;
+let ifincons = 0;
 let table = workerData.table;
 let reqEnCours = false;
 let scEnCours = false;
-let ifincons = 0;
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })

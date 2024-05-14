@@ -9,13 +9,11 @@ const id = workerData.id;
 const hostIP = workerData.hostIP;
 const hostname = workerData.hostname;
 const HTTPport = workerData.HTTPport; 
-const HTTPStartPort = workerData.HTTPStartPort; 
-let debcons = workerData.debprod;
-let fincons = workerData.finprod;
 let reqEnCours = false;
 let scEnCours = false;
-let ifincons = 0;
-
+let debcons = 0;
+let fincons = 0;
+let ifonprod = 0;
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
@@ -23,7 +21,7 @@ app.get('/', (req, res) => {
 
 
 app.get('/ifinprod', (req, res)=>{
-  ifincons +=1;
+  ifinprod +=1;
 })
 
 app.listen(HTTPport, () => {
@@ -73,7 +71,7 @@ async function start(){
             console.log(`\t \t ${workerData.id} has crossed the crossing`);
             fincons += 1;
             for(let i=0;i<table.length+1;i++){
-                fetch(`http://${hostname}:${HTTPStartPort + i}/ifincons`)
+                fetch(`http://${hostname}:${HTTPport + 1 + i}/ifincons`)
             }
             scEnCours = false;
             reqEnCours = false;
