@@ -4,7 +4,7 @@ const hostname = os.hostname();
 
 
 class myWorker{
-  constructor({id,hostname,HTTPport,HTTPStartPort}){
+  constructor({id,hostname,HTTPport,HTTPStartPort, table}){
     this.id = id;
     this.hostname = hostname;
     this.HTTPport = HTTPport;
@@ -15,6 +15,7 @@ class myWorker{
     this.debprod = 0;
     this.finprod = 0;
     this.ifincons = 0;
+    this.table = table;
   }
   async init(){
     data = this;
@@ -37,14 +38,14 @@ class Producteurs extends Array {
     constructor({numberOfWorkers, hostname, startPort}) {
         super();
         this.numberOfWorkers = numberOfWorkers;
+        let table = new Array(numberOfWorkers).fill(["rel",0]);
         this.hostname = hostname;
         this.startPort = startPort;
         let HTTPport = this.startPort;
         let HTTPStartPort = this.startPort;
         for(let id=0;  id<this.numberOfWorkers ; id++){
             HTTPport = this.startPort + id;
-            const theWorker = new myWorker({id,hostname:this.hostname,HTTPport,HTTPStartPort})
-            this.push(["rel",0]);
+            const theWorker = new myWorker({id,hostname:this.hostname,HTTPport,HTTPStartPort,table})
 
         }
     }
