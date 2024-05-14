@@ -42,11 +42,12 @@ class Producteurs extends Array {
         this.hostname = hostname;
         this.startPort = startPort;
         let HTTPport = this.startPort;
-        let HTTPStartPort = this.startPort;
+        this.push(new myWorker({id,hostname:this.hostname,HTTPport,HTTPStartPort,table}))
+        let HTTPStartPort = this.startPort+1;
         for(let id=0;  id<this.numberOfWorkers ; id++){
             HTTPport = this.startPort + id;
             const theWorker = new myWorker({id,hostname:this.hostname,HTTPport,HTTPStartPort,table})
-
+            this.push(theWorker)
         }
     }
 
@@ -70,12 +71,6 @@ class Producteurs extends Array {
 
   
     async launch(){
-        const token = {
-        type:'token',
-        payload:{
-            cpt:0
-        }
-        }
 
         fetch(
         `http://${this.hostname}:${this.startPort}/token`,
