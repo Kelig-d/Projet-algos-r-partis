@@ -2,7 +2,7 @@ const { Worker, workerData } = require('worker_threads');
 const os = require('os');
 
 const express = require('express');
-const N = 2;
+const N = 1;
 
 class ProducterController{
   constructor(id,HTTPStartPort, numberOfWorkers){
@@ -19,16 +19,17 @@ class ProducterController{
     this.ifincons = 0;
     this.reqEnCours = false;
     this.scEnCours = false;
+    this.time = new Date;
   }
 
   section_critique(){
-    if(!this.scEnCours && this.plus_vieille_date()==this.id && this.debprod - this.ifincons < N){
-      console.log(`\t \t Producter ${this.id} work in critical zone`);
+    if(!this.scEnCours && this.reqEnCours && this.plus_vieille_date()==this.id && this.debprod - this.ifincons < N){
+      console.log(`\t \t Producter ${this.id} work in critical zone ${(new Date - this.time) /1000} seconds`);
       this.debprod += 1;
       this.scEnCours = true;
-      return true;
+      this.worker.postMessage('access') ;    
     }
-    else return false;
+    else this.worker.postMessage('no access');
   }
 
   maj_h(he) {
@@ -71,6 +72,12 @@ class ProducterController{
     return plusVieilleDateProcessId;
   }
 
+  update_tab(id, type, value){
+    this.table[id] = [type, value];
+    this.section_critique();
+
+  }
+
   async init(){
     this.worker =  new Worker( `${__dirname}/worker-prod.js`, {workerData: {id:this.id,hostname:this.hostname,HTTPport:this.HTTPport,HTTPStartPort:this.HTTPStartPort,table:this.table}});
     this.app = express();
@@ -92,24 +99,24 @@ class ProducterController{
       .then(()=>{
       console.log(`worker has just send a ack to ${targetId}`);
       })
-      this.table[req.body.id] = ["req",this.he]
+      this.update_tab(req.body.id, "req", this.he)
   })
 
   this.app.post('/ack', (req, res) =>{
-    console.log("coucou");
     this.maj_h(req.body.hl);
-    this.table[req.body.id] = this.table[req.body.id][0] != "req" ? ["ack",req.body.hl] : this.table[req.body.id]
+    if(this.table[req.body.id][0] != "req") this.update_tab(req.body.id,"ack",req.body.hl);
   })
 
   this.app.post('/rel', (req, res)=>{
     this.maj_h(req.body.hl);
-    this.table[this.id] = ["rel",req.body.hl];
+    this.update_tab(this.id, "rel", req.body.hl)
     this.debprod += 1;
     this.finprod += 1;
   })
 
   this.app.get('/ifincons', (req, res)=>{
-    ifincons +=1;
+    this.ifincons +=1;
+    this.section_critique();
   })
 
     this.app.listen(this.HTTPport, () => {
@@ -121,23 +128,23 @@ class ProducterController{
          (messageFromWorker) => { 
           if(messageFromWorker == "besoin_sc"){
             if(!this.reqEnCours){
-              console.log(`\t \t ${this.id} asks for critical zone`);
+              console.log(`\t \t ${this.id} asks for critical zone ${(new Date - this.time) /1000} seconds`);
               this.hl += 1; 
               this.reqEnCours = true;
               this.diffuser("req", this.hl, this.id);
-              this.table[this.id] = ["req",this.hl];
-              this.section_critique() ? this.worker.postMessage('access') : this.worker.postMessage('no access');
+              this.update_tab(this.id,"req",this.hl)
+              this.section_critique();
             }
           }
           if(messageFromWorker == "fin_sc"){
-            if(reqEnCours && scEnCours){
-              console.log(`\t \t ${this.id} release the critical zone`);
+            if(this.reqEnCours && this.scEnCours){
+              console.log(`\t \t ${this.id} release the critical zone ${(new Date - this.time) /1000} seconds`);
               this.finprod += 1;
               fetch(`http://${this.hostname}:${this.HTTPStartPort - 1}/ifinprod`);
               this.scEnCours = false;
               this.hl+=1;
-              diffuser("rel",this.hl,this.id);
-              this.table[this.id] = ["rel",this.hl];
+              this.diffuser("rel",this.hl,this.id);
+              this.update_tab(this.id, "rel", this.hl);
               this.reqEnCours = false;
             }
 
@@ -150,49 +157,3 @@ class ProducterController{
 }
 
 module.exports = ProducterController;
-
-// class Producteurs extends Array {
-//     constructor({numberOfWorkers, hostname, startPort}) {
-//         super();
-//         this.numberOfWorkers = numberOfWorkers;
-        
-//         this.hostname = hostname;
-//         this.startPort = startPort;
-//         let HTTPport = this.startPort;
-//         let HTTPStartPort = this.startPort + 1;
-//         for(let id=0;  id<this.numberOfWorkers ; id++){
-//             HTTPport = HTTPStartPort + id;
-//             this.push(theWorker)
-//         }
-//     }
-
-//     async init(){
-//         const sitesPromises = new Array();
-//         this.forEach((site)=>{sitesPromises.push(site.init())})
-//         Promise.all(sitesPromises).then(()=>{
-//         setTimeout(()=>{
-//             this.launch()
-//         }, 1000)
-
-     
-    
-//         })
-//         setTimeout(()=>{this.harakiri()}, 100000);
-//     }
-
-//     harakiri(){
-//         this.forEach((site)=>{site.worker.terminate()});
-//     }
-
-  
-//     async launch(){
-
-
-//     }
-// }
-
-
-// const myRingOfWorkers = new Producteurs({numberOfWorkers:5,hostname, startPort:3000});
-// myRingOfWorkers.init().then(()=>{console.log(`done`)})
-
-

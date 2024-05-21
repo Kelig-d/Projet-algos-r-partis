@@ -1,11 +1,12 @@
 let producterController = require('./producterController.js');
-
+let ConsommateurController = require('./consommateurController.js');
 const numberOfWorkers = 5;
 const httpStartPort = 3001;
-let producters = [];
+let sites = [];
 for(let i=0;i<=numberOfWorkers;i++){
-    producters.push(new producterController(i,httpStartPort, numberOfWorkers))
+    sites.push(new producterController(i,httpStartPort, numberOfWorkers))
 }
-producters.forEach((prod)=>{
-    prod.init();
+sites.push(new ConsommateurController(-1, httpStartPort-1, numberOfWorkers))
+sites.forEach((s)=>{
+    s.init();
 })
