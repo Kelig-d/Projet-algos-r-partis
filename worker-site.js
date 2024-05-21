@@ -4,7 +4,6 @@ const express = require('express')
 const app = express()
 app.use(express.json());   
 app.use(express.urlencoded({ extended: true })); 
-console.log(workerData);
 const id = workerData.id; 
 const hostIP = workerData.hostIP;
 const hostname = workerData.hostname;
@@ -22,23 +21,33 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-app.get('/req',(req, res) =>{
-    maj_h(req.hl);
+app.post('/req',(req, res) =>{
+    maj_h(req.body.hl);
     hl +=1;
-    sendAck(hl, id, req.id);
-    table[req.id] = ["req",he]
+    sendAck(hl, id, req.body.id);
+    table[req.body.id] = ["req",he]
 })
 
-app.get('/ack', (req, res) =>{
-  maj_h(req.hl);
-  table[req.id] = table[req.id][0] != "req" ? ["ack",req.hl] : table[req.id]
+app.post('/ack', (req, res) =>{
+  maj_h(req.body.hl);
+  table[req.body.id] = table[req.body.id][0] != "req" ? ["ack",req.body.hl] : table[req.body.id]
 })
 
-app.get('/rel', (req, res)=>{
-  maj_h(req.hl);
-  table[id] = ["rel",req.hl];
+app.post('/rel', (req, res)=>{
+  maj_h(req.body.hl);
+  table[id] = ["rel",req.body.hl];
   debprod += 1;
   finprod += 1;
+})
+
+app.get('/besoinsc',(req,res)=>{
+  if(!reqEnCours){
+    console.log(`\t \t ${workerData.id} asks for critical zone`);
+    hl += 1; 
+    reqEnCours = true;
+    diffuser("req", hl, id);
+    table[id] = ["req",hl];
+  }
 })
 
 app.get('/ifincons', (req, res)=>{
@@ -47,9 +56,6 @@ app.get('/ifincons', (req, res)=>{
 
 app.listen(HTTPport, () => {
     console.log(`Worker Site number ${id} is running on http://${hostname}:${HTTPport}`)
-    //send message to main : all is ok.
-    console.log (`worker ${id} sends its message to parent`)
-    parentPort.postMessage({type:'workerOnline', id});
   })
   
 
@@ -65,8 +71,8 @@ function sendAck(hl, id, targetId){
     fetch(
         `http://${hostname}:${HTTPStartPort + targetId}/ack`,
         {
-            method: 'get',
-            body: JSON.stringify({"hl":hl,"id":id}),
+            method: 'post',
+            body: JSON.stringify({hl:hl,id:id}),
             headers: {'Content-Type': 'application/json'}
         }
         )
@@ -90,9 +96,9 @@ function diffuser(msg) {
       fetch(
         `http://${hostname}:${HTTPportDest}/${msg}`,
         {
-            method: 'get',
+            method: 'post',
             body: JSON.stringify({"hl":hl,"id":id}),
-            headers: {'Content-Type': 'application/json'}
+            headers: {'Content-Type': 'application/json', 'Accept':'application/json'}
         }
         )
         .then(()=>{
@@ -103,10 +109,10 @@ function diffuser(msg) {
 }
 
 function plus_vieille_date() {
-  let plusVieilleDate = 0;
-  let plusVieilleDateProcessId = 0;
+  let plusVieilleDate = hl;
+  let plusVieilleDateProcessId = id;
   for (let id = 0; id < table.length; id++) {
-    if (table[id][1] > plusVieilleDate) {
+    if (table[id][1] < plusVieilleDate) {
       plusVieilleDate = table[id][1];
       plusVieilleDateProcessId = id;
     }
@@ -114,18 +120,12 @@ function plus_vieille_date() {
   return plusVieilleDateProcessId;
 }
   
-  
+  /* Acquisition */
   async function cruise(){
     return new Promise((resolve, reject)=>{
       setTimeout(()=>{
           resolve();
-          if(!reqEnCours){
-            console.log(`\t \t ${workerData.id} has arrived to the crossing`);
-            hl += 1; 
-            reqEnCours = true;
-            diffuser("req", hl, id);
-            table[id] = ["req",hl];
-          }
+          fetch(`http://${hostname}:${HTTPport}/besoinsc`);
         }, 
         Math.floor(Math.random()*5000)
       )
@@ -134,8 +134,8 @@ function plus_vieille_date() {
   }
 
   function workOnSection(){
-          if(!scEnCours && plus_vieille_date()==id && debprod - ifincons < 2*table.length){
-            console.log(`\t \t ${workerData.id} cross the crossing`);
+          if(!scEnCours && plus_vieille_date()==id && debprod - ifincons < 2){
+            console.log(`\t \t ${workerData.id} work in critical zone`);
             debprod += 1;
             scEnCours = true;
           }
@@ -146,9 +146,9 @@ function plus_vieille_date() {
       setTimeout(()=>{
           resolve();
           if(reqEnCours && scEnCours){
-            console.log(`\t \t ${workerData.id} has crossed the crossing`);
+            console.log(`\t \t ${workerData.id} release the critical zone`);
             finprod += 1;
-            fetch(`http://${hostname}:${HTTPStartPort}/ack`)
+            fetch(`http://${hostname}:${HTTPStartPort - 1}/ifinprod`);
             scEnCours = false;
             hl+=1;
             diffuser("rel",hl,id);

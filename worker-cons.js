@@ -4,7 +4,7 @@ const express = require('express')
 const app = express()
 app.use(express.json());   
 app.use(express.urlencoded({ extended: true })); 
-
+console.log(workerData);
 const id = workerData.id; 
 const hostIP = workerData.hostIP;
 const hostname = workerData.hostname;
@@ -13,7 +13,8 @@ let reqEnCours = false;
 let scEnCours = false;
 let debcons = 0;
 let fincons = 0;
-let ifonprod = 0;
+let ifinprod = 0;
+let table = workerData.table;
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
@@ -27,8 +28,6 @@ app.get('/ifinprod', (req, res)=>{
 app.listen(HTTPport, () => {
     console.log(`Worker Site number ${id} is running on http://${hostname}:${HTTPport}`)
     //send message to main : all is ok.
-    console.log (`worker ${id} sends its message to parent`)
-    parentPort.postMessage({type:'workerOnline', id});
   })
   
 
@@ -45,7 +44,7 @@ async function start(){
       setTimeout(()=>{
           resolve();
           if(!reqEnCours){
-            console.log(`\t \t ${workerData.id} has arrived to consume`);
+            console.log(`\t \t cons has arrived to consume`);
             reqEnCours = true;
           }
         }, 
@@ -57,7 +56,7 @@ async function start(){
 
   function workOnSection(){
           if(!scEnCours && reqEnCours && debcons - ifinprod < 0){
-            console.log(`\t \t ${workerData.id} started consuming`);
+            console.log(`\t \t cons started consuming`);
             debcons += 1;
             scEnCours = true;
           }
@@ -68,7 +67,7 @@ async function start(){
       setTimeout(()=>{
           resolve();
           if(reqEnCours && scEnCours){
-            console.log(`\t \t ${workerData.id} has crossed the crossing`);
+            console.log(`\t \t cons has finished consumming`);
             fincons += 1;
             for(let i=0;i<table.length+1;i++){
                 fetch(`http://${hostname}:${HTTPport + 1 + i}/ifincons`)

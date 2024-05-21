@@ -60,9 +60,9 @@ class Producteurs extends Array {
         this.startPort = startPort;
         let HTTPport = this.startPort;
         this.push(new myWorkerCons({id:0,hostname:this.hostname,HTTPport,table}))
-        let HTTPStartPort = this.startPort+1;
+        let HTTPStartPort = this.startPort + 1;
         for(let id=0;  id<this.numberOfWorkers ; id++){
-            HTTPport = this.startPort + id;
+            HTTPport = HTTPStartPort + id;
             const theWorker = new myWorker({id,hostname:this.hostname,HTTPport,HTTPStartPort,table})
             this.push(theWorker)
         }
@@ -72,9 +72,9 @@ class Producteurs extends Array {
         const sitesPromises = new Array();
         this.forEach((site)=>{sitesPromises.push(site.init())})
         Promise.all(sitesPromises).then(()=>{
-        //setTimeout(()=>{
+        setTimeout(()=>{
             this.launch()
-        //}, 1000)
+        }, 1000)
 
      
     
@@ -89,20 +89,6 @@ class Producteurs extends Array {
   
     async launch(){
 
-        fetch(
-        `http://${this.hostname}:${this.startPort}/token`,
-        {
-            method: 'post',
-            body: JSON.stringify(token),
-            headers: {'Content-Type': 'application/json'}
-        }
-        )
-        .then((data)=>{
-        return data.json()
-        })
-        .then((respons)=>{
-        console.log(`main has just send a token to ${this.startPort}`);
-        })
 
     }
 }
