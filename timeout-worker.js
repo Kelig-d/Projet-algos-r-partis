@@ -6,7 +6,9 @@ async function start(){
   await start()
 }
 
- /* Acquisition */
+ /**
+  * Check if the worker can access to critical section after a random time
+  */ 
  async function acquisition(){
   return new Promise((resolve, reject)=>{
     setTimeout(()=>{
@@ -21,7 +23,10 @@ async function start(){
   })
 
 }
-
+/**
+ * Release the critical section after an random time
+ *  
+ */
 async function releaseSection(){
   return new Promise((resolve, reject)=>{
     setTimeout(()=>{

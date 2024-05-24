@@ -1,0 +1,2 @@
+The program can be start with npm run start
+The main creates n producteurController and one ConsommateurController to work on lamport. The have each a worker instance that throw messages after random times to trigger access and free of the critical zone

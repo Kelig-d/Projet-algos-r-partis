@@ -5,6 +5,12 @@ const express = require('express');
 const N = 1;
 
 class ProducterController{
+  /**
+   * Create a producterController object that will produce in a buffer randomly 
+   * @param {number} id
+   * @param {number} HTTPStartPort
+   * @param {number} numberOfWorkers
+   */
   constructor(id,HTTPStartPort, numberOfWorkers){
     this.id = id;
     this.hostname = os.hostname();
@@ -22,6 +28,10 @@ class ProducterController{
     this.time = new Date;
   }
 
+  /**
+   * Check if the worker can access to the crtitical section and send a message to the worker
+   * 
+   */
   section_critique(){
     if(!this.scEnCours && this.reqEnCours && this.plus_vieille_date()==this.id && this.debprod - this.ifincons < N){
       console.log(`\t \t Producter ${this.id} work in critical zone ${(new Date - this.time) /1000} seconds`);
@@ -32,14 +42,22 @@ class ProducterController{
     else this.worker.postMessage('no access');
   }
 
+  /**
+   * Update local clock if external clock is higher the local one
+   * @param {number} he external hour for the lamport clock
+   * 
+   */
   maj_h(he) {
     if (he > this.hl) {
       this.hl = he;
-    } else {
-      this.hl += 1;
-    }
   }
+}
   
+  /**
+   * Send a message (ack, req or rel) to all others producer workers 
+   * @param {string} msg
+   * 
+   */
   diffuser(msg) {
     for (let targetId = 0; targetId < this.table.length; targetId++) {
       let HTTPportDest = this.HTTPStartPort + targetId;
@@ -60,6 +78,10 @@ class ProducterController{
     }
   }
   
+  /**
+   * return the worker id that have the oldest date in the lamport clock
+   * @returns {number} id of the worker
+   */
   plus_vieille_date() {
     let plusVieilleDate = this.hl;
     let plusVieilleDateProcessId = this.id;
@@ -72,22 +94,37 @@ class ProducterController{
     return plusVieilleDateProcessId;
   }
 
+  /**
+   * Update the lamport matrix
+   * @param {number} id id of the worker to update
+   * @param {string} type message to put in matrix
+   * @param {number} value clock of the event
+   * 
+   */
   update_tab(id, type, value){
     this.table[id] = [type, value];
     this.section_critique();
 
   }
 
+  /**
+   * Initialize the ProducteurController
+   * 
+   */
   async init(){
-    this.worker =  new Worker( `${__dirname}/worker-prod.js`, {workerData: {id:this.id,hostname:this.hostname,HTTPport:this.HTTPport,HTTPStartPort:this.HTTPStartPort,table:this.table}});
+    this.worker =  new Worker( `${__dirname}/timeout-worker.js`, {workerData: {id:this.id,hostname:this.hostname,HTTPport:this.HTTPport,HTTPStartPort:this.HTTPStartPort,table:this.table}});
     this.app = express();
     this.app.use(express.json());   
     this.app.use(express.urlencoded({ extended: true })); 
 
     
+  /**
+   * Endpoint to get req messages
+   * 
+   */
   this.app.post('/req',(req, res) =>{
     this.maj_h(req.body.hl);
-    this.hl +=1;
+    this.hl+=1;
     fetch(
       `http://${this.hostname}:${this.HTTPStartPort + req.body.id}/ack`,
       {
@@ -97,33 +134,53 @@ class ProducterController{
       }
       )
       .then(()=>{
-      console.log(`worker has just send a ack to ${targetId}`);
+      console.log(`worker has just send a ack to ${req.body.id}`);
       })
-      this.update_tab(req.body.id, "req", this.he)
+      this.update_tab(req.body.id, "req", req.body.hl)
   })
 
+
+  /**
+   * Endpoint to get ack messages
+   */
   this.app.post('/ack', (req, res) =>{
     this.maj_h(req.body.hl);
     if(this.table[req.body.id][0] != "req") this.update_tab(req.body.id,"ack",req.body.hl);
   })
 
+
+  /**
+   * Endpoint to get rel messages
+   */
   this.app.post('/rel', (req, res)=>{
     this.maj_h(req.body.hl);
     this.update_tab(this.id, "rel", req.body.hl)
     this.debprod += 1;
+    this.section_critique();
     this.finprod += 1;
   })
 
+  /**
+   * Endpoint to get ifincons update
+   */
   this.app.get('/ifincons', (req, res)=>{
     this.ifincons +=1;
+    console.log("worker "+this.id+" next is "+this.plus_vieille_date());
+    console.log(this.table);
     this.section_critique();
   })
 
+  /**
+   * Start the express server
+   */
     this.app.listen(this.HTTPport, () => {
       console.log(`Worker Site number ${this.id} is running on http://${this.hostname}:${this.HTTPport}`)
     })
 
     return new Promise((resolve,_)=>{
+      /**
+       * Await for besoin_sc or fin_sc message from child worker to work on logcial process
+       */
       this.worker.on('message', 
          (messageFromWorker) => { 
           if(messageFromWorker == "besoin_sc"){
